@@ -1,0 +1,13 @@
+OrbitKit is a simple personal tools app for everyday planning and tracking.
+
+Use OrbitKit to estimate compound interest growth, calculate mortgage payments, and track active fasting sessions without clutter or complicated setup.
+
+Features:
+- Compound interest calculator with visual growth breakdown
+- Mortgage calculator with payment and amortization visuals
+- Fasting tracker that shows elapsed fasting time
+- Fasting milestones and achievements
+- Clean iPhone and iPad interface
+- Local-first experience with no account required
+
+OrbitKit is designed for quick checks, personal planning, and lightweight daily tracking.

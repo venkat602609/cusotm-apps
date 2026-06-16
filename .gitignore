@@ -1,2 +1,4 @@
 .DS_Store
 PersonalTools/build/
+.env.appstore
+fastlane/screenshots/

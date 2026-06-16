@@ -1,0 +1,1 @@
+OrbitKit does not require a login or account. The app includes a compound interest calculator, mortgage calculator, and fasting tracker. Data is stored locally on the user's device.
