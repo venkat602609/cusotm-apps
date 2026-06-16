@@ -26,6 +26,9 @@ let outputRoot = URL(fileURLWithPath: "AppStoreAssets/Screenshots/AppStore")
 
 let sizes = [
     SizeSpec(folder: "iPhone-6.9", width: 1320, height: 2868, deviceName: "iPhone"),
+    SizeSpec(folder: "iPhone-6.7", width: 1290, height: 2796, deviceName: "iPhone"),
+    SizeSpec(folder: "iPhone-6.5", width: 1284, height: 2778, deviceName: "iPhone"),
+    SizeSpec(folder: "iPhone-6.5-legacy", width: 1242, height: 2688, deviceName: "iPhone"),
     SizeSpec(folder: "iPad-13", width: 2064, height: 2752, deviceName: "iPad")
 ]
 
