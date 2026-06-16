@@ -25,19 +25,23 @@ platform :ios do
       "#{ENV.fetch("APP_REVIEW_PHONE").strip}\n"
     )
 
+    skip_screenshots = ENV["SKIP_SCREENSHOTS"] == "1"
     screenshots_root = File.expand_path("../PersonalTools/AppStoreAssets/Screenshots/AppStore", __dir__)
     fastlane_screenshots = File.expand_path("screenshots/en-US", __dir__)
-    FileUtils.rm_rf(fastlane_screenshots)
-    FileUtils.mkdir_p(fastlane_screenshots)
 
-    screenshot_sources = {
-      "iPhone-6.5" => "iphone",
-      "iPad-13" => "ipad"
-    }
+    unless skip_screenshots
+      FileUtils.rm_rf(fastlane_screenshots)
+      FileUtils.mkdir_p(fastlane_screenshots)
 
-    screenshot_sources.each do |folder, prefix|
-      Dir[File.join(screenshots_root, folder, "*.png")].sort.each_with_index do |source, index|
-        FileUtils.cp(source, File.join(fastlane_screenshots, "#{prefix}-#{index + 1}-#{File.basename(source)}"))
+      screenshot_sources = {
+        "iPhone-6.5" => "iphone",
+        "iPad-13" => "ipad"
+      }
+
+      screenshot_sources.each do |folder, prefix|
+        Dir[File.join(screenshots_root, folder, "*.png")].sort.each_with_index do |source, index|
+          FileUtils.cp(source, File.join(fastlane_screenshots, "#{prefix}-#{index + 1}-#{File.basename(source)}"))
+        end
       end
     end
 
@@ -51,7 +55,10 @@ platform :ios do
       force: true,
       skip_binary_upload: true,
       skip_app_version_update: true,
-      overwrite_screenshots: true
+      skip_screenshots: skip_screenshots,
+      overwrite_screenshots: true,
+      precheck_include_in_app_purchases: false,
+      run_precheck_before_submit: false
     )
   end
 end
