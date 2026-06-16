@@ -11,6 +11,7 @@ OrbitKit is a native SwiftUI iPhone and iPad app that bundles simple personal to
 - `PersonalTools/` - Xcode project and SwiftUI app source
 - `PersonalTools/Assets.xcassets/` - app icon and image assets
 - `PersonalTools/AppStoreAssets/` - captured App Store screenshot assets
+- `PersonalTools/AppStoreAssets/Screenshots/AppStore/` - generated App Store-ready iPhone and iPad screenshot images
 - `docs/` - GitHub Pages marketing, support, and privacy pages
 
 ## App Store Metadata
@@ -38,6 +39,13 @@ Expected URLs:
 - Marketing: `https://venkat602609.github.io/cusotm-apps/`
 - Support: `https://venkat602609.github.io/cusotm-apps/support.html`
 - Privacy Policy: `https://venkat602609.github.io/cusotm-apps/privacy.html`
+
+## App Store Screenshot Images
+
+Generated App Store screenshots are available at:
+
+- iPhone 6.9-inch: `PersonalTools/AppStoreAssets/Screenshots/AppStore/iPhone-6.9/`
+- iPad 13-inch: `PersonalTools/AppStoreAssets/Screenshots/AppStore/iPad-13/`
 
 ## Build
 
