@@ -11,6 +11,20 @@ platform :ios do
       key_filepath: ENV.fetch("APP_STORE_CONNECT_KEY_PATH")
     )
 
+    metadata_source = File.expand_path("metadata", __dir__)
+    generated_metadata = File.expand_path("generated_metadata", __dir__)
+    FileUtils.rm_rf(generated_metadata)
+    FileUtils.cp_r(metadata_source, generated_metadata)
+
+    if ENV["APP_REVIEW_PHONE"].to_s.strip.empty?
+      UI.user_error!("APP_REVIEW_PHONE is required. Add it to .env.appstore in international format, for example +1 555 555 5555.")
+    end
+
+    File.write(
+      File.join(generated_metadata, "review_information", "phone_number.txt"),
+      "#{ENV.fetch("APP_REVIEW_PHONE").strip}\n"
+    )
+
     screenshots_root = File.expand_path("../PersonalTools/AppStoreAssets/Screenshots/AppStore", __dir__)
     fastlane_screenshots = File.expand_path("screenshots/en-US", __dir__)
     FileUtils.rm_rf(fastlane_screenshots)
@@ -30,7 +44,7 @@ platform :ios do
     deliver(
       api_key: api_key,
       app_identifier: "com.venkata.Orbit",
-      metadata_path: "fastlane/metadata",
+      metadata_path: "fastlane/generated_metadata",
       screenshots_path: "fastlane/screenshots",
       submit_for_review: false,
       automatic_release: false,
