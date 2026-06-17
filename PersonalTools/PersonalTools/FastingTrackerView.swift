@@ -3,6 +3,7 @@ import SwiftUI
 struct FastingTrackerView: View {
     @EnvironmentObject private var store: FastingStore
     @State private var now = Date.now
+    @State private var previewHours = 0.0
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private let milestones = FastingMilestone.defaultMilestones
@@ -13,6 +14,11 @@ struct FastingTrackerView: View {
                 Section {
                     activeFastPanel
                         .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                }
+
+                Section("What to Expect") {
+                    fastingPreviewPanel
+                        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                 }
 
                 Section("Achievements") {
@@ -140,6 +146,93 @@ struct FastingTrackerView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
+    private var fastingPreviewPanel: some View {
+        let milestone = previewMilestone
+        let next = milestones.first { previewHours < $0.hours }
+
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Explore the fasting timeline")
+                        .font(.headline)
+                    Text("Slide from 0 to 96 hours to preview body-state graphics and benefits.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text("\(Int(previewHours.rounded()))h")
+                    .font(.title2.weight(.bold).monospacedDigit())
+                    .foregroundStyle(Color.appTeal)
+            }
+
+            BodyMilestoneGraphic(milestone: milestone, unlocked: true)
+                .frame(height: 230)
+                .id("graphic-\(milestone.id)")
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+
+            VStack(spacing: 8) {
+                Slider(value: $previewHours, in: 0...96, step: 1) {
+                    Text("Preview hours")
+                } minimumValueLabel: {
+                    Text("0h")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } maximumValueLabel: {
+                    Text("96h")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .tint(Color.appTeal)
+
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.secondary.opacity(0.16))
+
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.appAmber, Color.appMint, Color.appBlue, Color.appTeal],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: proxy.size.width * CGFloat(previewHours / 96))
+                    }
+                }
+                .frame(height: 7)
+            }
+
+            HStack {
+                PreviewBadge(title: "Current", value: milestone.title, systemImage: milestone.activationIcon, color: milestone.activationColor)
+                PreviewBadge(title: "Next", value: next?.hoursText ?? "Done", systemImage: "flag.checkered", color: Color.appBlue)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(milestone.activationTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.appInk)
+
+                MilestoneInsightRow(title: "Body shift", text: milestone.bodyShift, color: Color.appBlue)
+                MilestoneInsightRow(title: "Detectable signs", text: milestone.detectableSigns, color: Color.appMint)
+                MilestoneInsightRow(title: "What to expect", text: milestone.experience, color: Color.appAmber)
+            }
+            .id("benefits-\(milestone.id)")
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
+        .padding()
+        .background(Color.appSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .animation(.easeInOut(duration: 0.22), value: milestone.id)
+        .animation(.easeInOut(duration: 0.16), value: previewHours)
+    }
+
+    private var previewMilestone: FastingMilestone {
+        milestones.last { previewHours >= $0.hours } ?? milestones[0]
+    }
+
     private func progressView(for session: FastingSession) -> some View {
         let elapsed = session.elapsedSeconds(at: now)
         let nextMilestone = milestones.first { elapsed < $0.seconds }
@@ -258,6 +351,41 @@ struct FastingTrackerView: View {
                 }
                 .fixedSize(horizontal: false, vertical: true)
             }
+        }
+    }
+
+    private struct PreviewBadge: View {
+        let title: String
+        let value: String
+        let systemImage: String
+        let color: Color
+
+        var body: some View {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(color)
+                    .frame(width: 24, height: 24)
+                    .background(color.opacity(0.14))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(value)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.appInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(color.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
     }
 
