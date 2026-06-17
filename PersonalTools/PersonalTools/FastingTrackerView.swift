@@ -147,8 +147,9 @@ struct FastingTrackerView: View {
     }
 
     private var fastingPreviewPanel: some View {
-        let milestone = previewMilestone
-        let next = milestones.first { previewHours < $0.hours }
+        let state = previewState
+        let milestone = state.current
+        let next = state.next
 
         return VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
@@ -167,13 +168,11 @@ struct FastingTrackerView: View {
                     .foregroundStyle(Color.appTeal)
             }
 
-            BodyMilestoneGraphic(milestone: milestone, unlocked: true)
+            PreviewMorphGraphic(current: milestone, next: next, progress: state.progress)
                 .frame(height: 230)
-                .id("graphic-\(milestone.id)")
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
 
             VStack(spacing: 8) {
-                Slider(value: $previewHours, in: 0...96, step: 1) {
+                Slider(value: $previewHours, in: 0...96) {
                     Text("Preview hours")
                 } minimumValueLabel: {
                     Text("0h")
@@ -206,31 +205,53 @@ struct FastingTrackerView: View {
             }
 
             HStack {
-                PreviewBadge(title: "Current", value: milestone.title, systemImage: milestone.activationIcon, color: milestone.activationColor)
+                PreviewBadge(title: "Current", value: milestone.title, systemImage: milestone.activationIcon, color: mixedColor(current: milestone.activationColor, next: next?.activationColor, progress: state.progress))
                 PreviewBadge(title: "Next", value: next?.hoursText ?? "Done", systemImage: "flag.checkered", color: Color.appBlue)
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text(milestone.activationTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.appInk)
+            ZStack(alignment: .topLeading) {
+                previewBenefits(for: milestone, opacity: next == nil ? 1 : 1 - state.progress)
 
-                MilestoneInsightRow(title: "Body shift", text: milestone.bodyShift, color: Color.appBlue)
-                MilestoneInsightRow(title: "Detectable signs", text: milestone.detectableSigns, color: Color.appMint)
-                MilestoneInsightRow(title: "What to expect", text: milestone.experience, color: Color.appAmber)
+                if let next {
+                    previewBenefits(for: next, opacity: state.progress)
+                        .offset(y: (1 - state.progress) * 10)
+                }
             }
-            .id("benefits-\(milestone.id)")
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            .frame(minHeight: 142, alignment: .topLeading)
         }
         .padding()
         .background(Color.appSurface)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .animation(.easeInOut(duration: 0.22), value: milestone.id)
-        .animation(.easeInOut(duration: 0.16), value: previewHours)
+        .animation(.easeInOut(duration: 0.2), value: previewHours)
     }
 
-    private var previewMilestone: FastingMilestone {
-        milestones.last { previewHours >= $0.hours } ?? milestones[0]
+    private var previewState: (current: FastingMilestone, next: FastingMilestone?, progress: Double) {
+        let current = milestones.last { previewHours >= $0.hours } ?? milestones[0]
+        guard let next = milestones.first(where: { $0.hours > current.hours }) else {
+            return (current, nil, 1)
+        }
+
+        let range = max(next.hours - current.hours, 1)
+        let progress = min(max((previewHours - current.hours) / range, 0), 1)
+        return (current, next, progress)
+    }
+
+    private func previewBenefits(for milestone: FastingMilestone, opacity: Double) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(milestone.activationTitle)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.appInk)
+
+            MilestoneInsightRow(title: "Body shift", text: milestone.bodyShift, color: Color.appBlue)
+            MilestoneInsightRow(title: "Detectable signs", text: milestone.detectableSigns, color: Color.appMint)
+            MilestoneInsightRow(title: "What to expect", text: milestone.experience, color: Color.appAmber)
+        }
+        .opacity(opacity)
+    }
+
+    private func mixedColor(current: Color, next: Color?, progress: Double) -> Color {
+        guard let next else { return current }
+        return progress < 0.5 ? current : next
     }
 
     private func progressView(for session: FastingSession) -> some View {
@@ -386,6 +407,154 @@ struct FastingTrackerView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(color.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+    }
+
+    private struct PreviewMorphGraphic: View {
+        let current: FastingMilestone
+        let next: FastingMilestone?
+        let progress: Double
+
+        var body: some View {
+            GeometryReader { proxy in
+                let width = proxy.size.width
+                let height = proxy.size.height
+                let color = progress < 0.5 ? current.activationColor : (next?.activationColor ?? current.activationColor)
+                let activation = blended(\.activationLevel)
+                let activationX = blendedCGFloat(\.activationX)
+                let activationY = blendedCGFloat(\.activationY)
+
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.appAmber.opacity(0.1), Color.appMint.opacity(0.1), Color.appBlue.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+
+                    Image(current.artworkName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: width, height: height)
+                        .scaleEffect(current.artworkScale + progress * 0.06, anchor: current.artworkAnchor)
+                        .opacity(1 - progress * 0.72)
+
+                    if let next {
+                        Image(next.artworkName)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: width, height: height)
+                            .scaleEffect(next.artworkScale - (1 - progress) * 0.04, anchor: next.artworkAnchor)
+                            .opacity(progress)
+                            .blur(radius: max(0, (0.5 - abs(progress - 0.5)) * 5))
+                    }
+
+                    color
+                        .opacity(activation * 0.2)
+                        .blendMode(.screen)
+
+                    ForEach(0..<4, id: \.self) { index in
+                        Circle()
+                            .stroke(color.opacity(activation * (0.34 - Double(index) * 0.055)), lineWidth: 2)
+                            .frame(width: 54 + CGFloat(index) * (30 + CGFloat(progress * 8)), height: 54 + CGFloat(index) * (30 + CGFloat(progress * 8)))
+                            .position(x: width * activationX, y: height * activationY)
+                            .scaleEffect(1 + progress * 0.12)
+                    }
+
+                    ForEach(0..<Int(12 + activation * 18), id: \.self) { index in
+                        Circle()
+                            .fill(color.opacity(activation * 0.48))
+                            .frame(width: particleSize(index), height: particleSize(index))
+                            .position(
+                                x: width * particleX(index),
+                                y: height * particleY(index)
+                            )
+                    }
+
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.9),
+                            Color.white.opacity(0.42),
+                            Color.appInk.opacity(0.16)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(nextTitle, systemImage: nextIcon)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color.appInk)
+
+                        Text(nextSubtitle)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        MeterLine(label: "Glycogen", value: blended(\.glycogenLevel), color: Color.appAmber)
+                        MeterLine(label: "Fat use", value: blended(\.fatUseLevel), color: Color.appMint)
+                        MeterLine(label: "Ketones", value: blended(\.ketoneLevel), color: Color.appBlue)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: 176, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Circle()
+                        .stroke(color.opacity(0.64), lineWidth: 2)
+                        .background(Circle().fill(color.opacity(0.16)))
+                        .frame(width: 54, height: 54)
+                        .overlay {
+                            Image(systemName: nextIcon)
+                                .font(.title3)
+                                .foregroundStyle(color)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+        }
+
+        private var nextTitle: String {
+            guard let next else { return current.activationTitle }
+            return progress < 0.5 ? current.activationTitle : next.activationTitle
+        }
+
+        private var nextSubtitle: String {
+            guard let next else { return current.visualTitle }
+            return progress < 0.5 ? current.visualTitle : next.visualTitle
+        }
+
+        private var nextIcon: String {
+            guard let next else { return current.activationIcon }
+            return progress < 0.5 ? current.activationIcon : next.activationIcon
+        }
+
+        private func blended(_ keyPath: KeyPath<FastingMilestone, Double>) -> Double {
+            guard let next else { return current[keyPath: keyPath] }
+            return current[keyPath: keyPath] + (next[keyPath: keyPath] - current[keyPath: keyPath]) * progress
+        }
+
+        private func blendedCGFloat(_ keyPath: KeyPath<FastingMilestone, CGFloat>) -> CGFloat {
+            guard let next else { return current[keyPath: keyPath] }
+            return current[keyPath: keyPath] + (next[keyPath: keyPath] - current[keyPath: keyPath]) * CGFloat(progress)
+        }
+
+        private func particleSize(_ index: Int) -> CGFloat {
+            4 + CGFloat((index % 4) * 2) + CGFloat(progress * 2)
+        }
+
+        private func particleX(_ index: Int) -> CGFloat {
+            let base = Double((index * 37) % 100) / 100
+            let drift = sin((Double(index) + progress * 4) * 0.7) * 0.035
+            return 0.36 + base * 0.56 + drift
+        }
+
+        private func particleY(_ index: Int) -> CGFloat {
+            let base = Double((index * 53) % 100) / 100
+            let rise = progress * 0.08
+            return 0.18 + base * 0.68 - rise
         }
     }
 
