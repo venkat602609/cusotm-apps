@@ -43,6 +43,24 @@ struct FastingTrackerView: View {
                 }
 
                 Section("History") {
+                    NavigationLink {
+                        FastingCalendarHistoryView(now: now)
+                            .environmentObject(store)
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Calendar History")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Review fasting days, daily hours, and achievement markers.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "calendar.badge.clock")
+                                .foregroundStyle(Color.appTeal)
+                        }
+                    }
+
                     if store.sessions.isEmpty {
                         VStack(spacing: 10) {
                             Image(systemName: "timer")
@@ -384,6 +402,326 @@ struct FastingTrackerView: View {
         }
 
         return "\(hours)h \(minutes)m"
+    }
+}
+
+private struct FastingCalendarHistoryView: View {
+    @EnvironmentObject private var store: FastingStore
+    @State private var visibleMonth = Date.now
+    @State private var selectedDay = Date.now
+
+    let now: Date
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
+    private let calendar = Calendar.current
+
+    var body: some View {
+        List {
+            Section {
+                VStack(spacing: 14) {
+                    monthHeader
+                    weekdayHeader
+
+                    LazyVGrid(columns: columns, spacing: 6) {
+                        ForEach(Array(monthCells.enumerated()), id: \.offset) { _, date in
+                            if let date {
+                                dayCell(for: date)
+                            } else {
+                                Color.clear
+                                    .frame(height: 76)
+                            }
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
+            Section("Selected Day") {
+                selectedDaySummary
+            }
+
+            Section("Achievement Key") {
+                AchievementKeyRow(systemImage: "leaf.fill", title: "Started", description: "Any fasting time recorded")
+                AchievementKeyRow(systemImage: "checkmark.seal.fill", title: "Strong", description: "12 or more fasting hours")
+                AchievementKeyRow(systemImage: "flame.fill", title: "Long", description: "16 or more fasting hours")
+                AchievementKeyRow(systemImage: "star.circle.fill", title: "Full Day", description: "24 or more fasting hours")
+            }
+        }
+        .navigationTitle("Fasting Calendar")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            visibleMonth = selectedDay
+        }
+    }
+
+    private var monthHeader: some View {
+        HStack {
+            Button {
+                moveMonth(by: -1)
+            } label: {
+                Image(systemName: "chevron.left")
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.bordered)
+
+            Spacer()
+
+            VStack(spacing: 3) {
+                Text(monthTitle)
+                    .font(.headline)
+                    .foregroundStyle(Color.appInk)
+                Text("\(hoursText(monthTotalSeconds)) fasted this month")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Button {
+                moveMonth(by: 1)
+            } label: {
+                Image(systemName: "chevron.right")
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+
+    private var weekdayHeader: some View {
+        LazyVGrid(columns: columns, spacing: 6) {
+            ForEach(weekdaySymbols, id: \.self) { symbol in
+                Text(symbol)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var selectedDaySummary: some View {
+        let sessions = sessionsForSelectedDay
+        let totalSeconds = dayTotalSeconds(selectedDay)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(selectedDay.formatted(date: .abbreviated, time: .omitted))
+                        .font(.headline)
+                    Text("\(hoursText(totalSeconds)) fasted")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                achievementIcon(for: totalSeconds)
+                    .font(.title2)
+                    .foregroundStyle(achievementColor(for: totalSeconds))
+            }
+
+            if sessions.isEmpty {
+                Text("No fasting time recorded for this day.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(sessions) { session in
+                    HStack {
+                        Image(systemName: session.isActive ? "timer.circle.fill" : "checkmark.circle.fill")
+                            .foregroundStyle(session.isActive ? Color.appTeal : Color.appMint)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(sessionRangeText(session))
+                                .font(.caption.weight(.semibold))
+                            Text("\(hoursText(overlapSeconds(session, on: selectedDay))) on this day")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var monthCells: [Date?] {
+        guard let interval = calendar.dateInterval(of: .month, for: visibleMonth) else { return [] }
+        let firstDay = interval.start
+        let weekday = calendar.component(.weekday, from: firstDay)
+        let leadingBlanks = (weekday - calendar.firstWeekday + 7) % 7
+        let numberOfDays = calendar.range(of: .day, in: .month, for: firstDay)?.count ?? 0
+        let dates = (0..<numberOfDays).compactMap { calendar.date(byAdding: .day, value: $0, to: firstDay) }
+
+        return Array(repeating: nil, count: leadingBlanks) + dates
+    }
+
+    private var monthTitle: String {
+        visibleMonth.formatted(.dateTime.month(.wide).year())
+    }
+
+    private var monthTotalSeconds: TimeInterval {
+        monthCells.compactMap { $0 }.reduce(0) { $0 + dayTotalSeconds($1) }
+    }
+
+    private var sessionsForSelectedDay: [FastingSession] {
+        store.sessions.filter { overlapSeconds($0, on: selectedDay) > 0 }
+    }
+
+    private var weekdaySymbols: [String] {
+        let symbols = calendar.shortStandaloneWeekdaySymbols
+        let first = max(calendar.firstWeekday - 1, 0)
+        return Array(symbols[first...]) + Array(symbols[..<first])
+    }
+
+    private func dayCell(for date: Date) -> some View {
+        let totalSeconds = dayTotalSeconds(date)
+        let hasFast = totalSeconds > 0
+        let isSelected = calendar.isDate(date, inSameDayAs: selectedDay)
+        let isToday = calendar.isDateInToday(date)
+
+        return Button {
+            selectedDay = date
+        } label: {
+            VStack(spacing: 5) {
+                HStack {
+                    Text("\(calendar.component(.day, from: date))")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(isSelected ? Color.white : Color.appInk)
+
+                    Spacer(minLength: 0)
+
+                    if hasFast {
+                        achievementIcon(for: totalSeconds)
+                            .font(.caption)
+                            .foregroundStyle(isSelected ? Color.white : achievementColor(for: totalSeconds))
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Text(hasFast ? compactHoursText(totalSeconds) : "--")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.9) : .secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(hasFast ? achievementColor(for: totalSeconds) : Color.secondary.opacity(0.14))
+                    .frame(height: 5)
+                    .opacity(isSelected ? 0.9 : 1)
+            }
+            .padding(7)
+            .frame(maxWidth: .infinity, minHeight: 76)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isSelected ? Color.appTeal : Color.appSurface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(isToday ? Color.appAmber : Color.secondary.opacity(0.12), lineWidth: isToday ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(date.formatted(date: .abbreviated, time: .omitted)), \(hoursText(totalSeconds)) fasted")
+    }
+
+    private func moveMonth(by value: Int) {
+        guard let date = calendar.date(byAdding: .month, value: value, to: visibleMonth) else { return }
+        visibleMonth = date
+
+        if let interval = calendar.dateInterval(of: .month, for: date),
+           !interval.contains(selectedDay) {
+            selectedDay = interval.start
+        }
+    }
+
+    private func dayTotalSeconds(_ date: Date) -> TimeInterval {
+        store.sessions.reduce(0) { $0 + overlapSeconds($1, on: date) }
+    }
+
+    private func overlapSeconds(_ session: FastingSession, on date: Date) -> TimeInterval {
+        let dayStart = calendar.startOfDay(for: date)
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { return 0 }
+        let sessionEnd = session.endedAt ?? now
+        let start = max(session.startedAt, dayStart)
+        let end = min(sessionEnd, dayEnd)
+
+        return max(end.timeIntervalSince(start), 0)
+    }
+
+    private func achievementIcon(for seconds: TimeInterval) -> Image {
+        switch seconds / 3600 {
+        case 24...:
+            return Image(systemName: "star.circle.fill")
+        case 16..<24:
+            return Image(systemName: "flame.fill")
+        case 12..<16:
+            return Image(systemName: "checkmark.seal.fill")
+        case 0.01..<12:
+            return Image(systemName: "leaf.fill")
+        default:
+            return Image(systemName: "circle")
+        }
+    }
+
+    private func achievementColor(for seconds: TimeInterval) -> Color {
+        switch seconds / 3600 {
+        case 24...:
+            return Color.appAmber
+        case 16..<24:
+            return Color.appTeal
+        case 12..<16:
+            return Color.appMint
+        case 0.01..<12:
+            return Color.appBlue
+        default:
+            return Color.secondary.opacity(0.45)
+        }
+    }
+
+    private func sessionRangeText(_ session: FastingSession) -> String {
+        let start = session.startedAt.formatted(date: .omitted, time: .shortened)
+        let end = (session.endedAt ?? now).formatted(date: .omitted, time: .shortened)
+        return "\(start) - \(session.isActive ? "Active" : end)"
+    }
+
+    private func hoursText(_ interval: TimeInterval) -> String {
+        let totalMinutes = max(Int(interval / 60), 0)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        return "\(hours)h \(minutes)m"
+    }
+
+    private func compactHoursText(_ interval: TimeInterval) -> String {
+        let hours = interval / 3600
+        if hours >= 10 {
+            return "\(Int(hours.rounded()))h"
+        }
+
+        return String(format: "%.1fh", hours)
+    }
+}
+
+private struct AchievementKeyRow: View {
+    let systemImage: String
+    let title: String
+    let description: String
+
+    var body: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(Color.appTeal)
+        }
     }
 }
 
