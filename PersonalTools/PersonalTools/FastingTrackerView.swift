@@ -533,6 +533,71 @@ private struct FastingMilestone: Identifiable {
             glycogenLevel: 0.07,
             fatUseLevel: 0.92,
             ketoneLevel: 0.82
+        ),
+        FastingMilestone(
+            hours: 48,
+            title: "Two Days",
+            description: "A two-day extended fast checkpoint.",
+            systemImage: "calendar.badge.clock",
+            bodyShift: "Ketone use may be more established, while the body works to conserve glucose for cells that need it.",
+            detectableSigns: "Blood or breath ketones may read higher; standing dizziness can point to low fluid or electrolytes.",
+            experience: "Hunger may be less constant, but fatigue, chills, poor sleep, or irritability can appear.",
+            visualTitle: "Ketone reliance deepens",
+            glycogenLevel: 0.05,
+            fatUseLevel: 0.94,
+            ketoneLevel: 0.88
+        ),
+        FastingMilestone(
+            hours: 60,
+            title: "Sixty Hours",
+            description: "A significant multi-day fasting stretch.",
+            systemImage: "waveform.path.ecg",
+            bodyShift: "Stress hormones and electrolyte balance can become more important during this window.",
+            detectableSigns: "Resting heart rate, sleep quality, temperature, and mood may feel different than usual.",
+            experience: "Move slowly when standing. Stop if you feel faint, confused, weak, or unable to function normally.",
+            visualTitle: "Electrolytes matter more",
+            glycogenLevel: 0.04,
+            fatUseLevel: 0.95,
+            ketoneLevel: 0.9
+        ),
+        FastingMilestone(
+            hours: 72,
+            title: "Three Days",
+            description: "A three-day fast milestone that deserves extra caution.",
+            systemImage: "exclamationmark.shield.fill",
+            bodyShift: "The body may be strongly adapted toward fat and ketone fuel, but individual responses vary widely.",
+            detectableSigns: "Ketones may be high; dehydration, low blood pressure, or electrolyte symptoms are more concerning.",
+            experience: "This is no longer a casual fast. Medical guidance is recommended, especially before repeating it.",
+            visualTitle: "High-caution adaptation zone",
+            glycogenLevel: 0.03,
+            fatUseLevel: 0.96,
+            ketoneLevel: 0.92
+        ),
+        FastingMilestone(
+            hours: 84,
+            title: "Eighty Four",
+            description: "A late-stage extended fast checkpoint.",
+            systemImage: "bolt.heart.fill",
+            bodyShift: "Your body may continue prioritizing ketones, but prolonged fasting can increase strain.",
+            detectableSigns: "Persistent dizziness, racing heart, severe weakness, confusion, or nausea are stop signals.",
+            experience: "Keep activity light and be careful with refeeding. Consider ending the fast if symptoms build.",
+            visualTitle: "Prolonged-fast strain check",
+            glycogenLevel: 0.025,
+            fatUseLevel: 0.97,
+            ketoneLevel: 0.93
+        ),
+        FastingMilestone(
+            hours: 96,
+            title: "Four Days",
+            description: "A 96-hour extended fast milestone.",
+            systemImage: "cross.case.fill",
+            bodyShift: "Four-day fasting is a medical-risk zone for many people, even when fuel adaptation feels steady.",
+            detectableSigns: "Electrolyte imbalance, low blood pressure, abnormal heart rhythm symptoms, or confusion need care.",
+            experience: "Do not push through severe symptoms. Refeed gradually and seek professional advice for extended fasts.",
+            visualTitle: "Four-day safety checkpoint",
+            glycogenLevel: 0.02,
+            fatUseLevel: 0.97,
+            ketoneLevel: 0.94
         )
     ]
 }
