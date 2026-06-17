@@ -19,11 +19,27 @@ struct FastingTrackerView: View {
                     let elapsed = store.activeSession?.elapsedSeconds(at: now) ?? 0
 
                     VStack(alignment: .leading, spacing: 12) {
+                        Text("Milestones are educational estimates. Your body may respond differently based on meals, activity, sleep, hydration, medications, and health conditions.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.bottom, 4)
+
                         ForEach(milestones) { milestone in
                             milestoneRow(milestone, elapsed: elapsed)
                         }
                     }
                     .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                }
+
+                Section("Safety") {
+                    Label {
+                        Text("Stop fasting and seek medical guidance for severe dizziness, confusion, fainting, chest pain, persistent vomiting, or signs of low blood sugar. Talk to a clinician first if you are pregnant, have diabetes, take glucose-lowering medication, or have a history of eating disorders.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "cross.case.fill")
+                            .foregroundStyle(Color.appTeal)
+                    }
                 }
 
                 Section("History") {
@@ -141,29 +157,182 @@ struct FastingTrackerView: View {
     private func milestoneRow(_ milestone: FastingMilestone, elapsed: TimeInterval) -> some View {
         let unlocked = elapsed >= milestone.seconds
 
-        return HStack(spacing: 12) {
-            Image(systemName: unlocked ? "checkmark.seal.fill" : milestone.systemImage)
-                .font(.title3)
-                .foregroundStyle(unlocked ? Color.appTeal : Color.secondary)
-                .frame(width: 28)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(unlocked ? Color.appTeal.opacity(0.16) : Color.secondary.opacity(0.12))
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack {
-                    Text(milestone.title)
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Text(milestone.hoursText)
-                        .font(.caption.weight(.semibold))
+                    Image(systemName: unlocked ? "checkmark.seal.fill" : milestone.systemImage)
+                        .font(.title3)
                         .foregroundStyle(unlocked ? Color.appTeal : Color.secondary)
                 }
+                .frame(width: 42, height: 42)
 
-                Text(milestone.description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(milestone.title)
+                        .font(.subheadline.weight(.semibold))
+
+                    Text(milestone.description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text(milestone.hoursText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(unlocked ? Color.appTeal : Color.secondary)
+            }
+
+            BodyMilestoneGraphic(milestone: milestone, unlocked: unlocked)
+                .frame(height: 112)
+
+            VStack(alignment: .leading, spacing: 9) {
+                MilestoneInsightRow(title: "Body shift", text: milestone.bodyShift, color: Color.appBlue)
+                MilestoneInsightRow(title: "Detectable signs", text: milestone.detectableSigns, color: Color.appMint)
+                MilestoneInsightRow(title: "What to expect", text: milestone.experience, color: Color.appAmber)
             }
         }
-        .padding(.vertical, 4)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(unlocked ? Color.appSurface : Color.appSurface.opacity(0.62))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(unlocked ? Color.appTeal.opacity(0.22) : Color.secondary.opacity(0.12), lineWidth: 1)
+        )
         .opacity(store.activeSession == nil || unlocked ? 1 : 0.72)
+    }
+
+    private struct MilestoneInsightRow: View {
+        let title: String
+        let text: String
+        let color: Color
+
+        var body: some View {
+            HStack(alignment: .top, spacing: 8) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 7, height: 7)
+                    .padding(.top, 5)
+
+                HStack {
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.appInk)
+
+                    Text(text)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private struct BodyMilestoneGraphic: View {
+        let milestone: FastingMilestone
+        let unlocked: Bool
+
+        var body: some View {
+            GeometryReader { proxy in
+                let width = proxy.size.width
+                let height = proxy.size.height
+                let accent = unlocked ? Color.appTeal : Color.secondary
+
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.appBlue.opacity(0.09), Color.appMint.opacity(0.08), Color.appAmber.opacity(0.08)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Capsule()
+                                .stroke(accent.opacity(0.26), lineWidth: 3)
+                                .frame(width: 46, height: 68)
+
+                            Circle()
+                                .fill(accent.opacity(0.18))
+                                .frame(width: 28, height: 28)
+                                .offset(y: -40)
+
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Color.appAmber.opacity((1 - milestone.glycogenLevel) * 0.5 + 0.12))
+                                .frame(width: 24, height: max(10, 46 * milestone.glycogenLevel))
+                                .offset(y: 14 + (1 - milestone.glycogenLevel) * 18)
+
+                            ForEach(0..<3, id: \.self) { index in
+                                Circle()
+                                    .fill(Color.appMint.opacity(milestone.fatUseLevel * 0.46 + 0.16))
+                                    .frame(width: 9 + CGFloat(index) * 2, height: 9 + CGFloat(index) * 2)
+                                    .offset(x: CGFloat(index - 1) * 20, y: 38)
+                            }
+
+                            ForEach(0..<4, id: \.self) { index in
+                                Circle()
+                                    .fill(Color.appBlue.opacity(milestone.ketoneLevel * 0.6 + 0.1))
+                                    .frame(width: 6 + milestone.ketoneLevel * 8, height: 6 + milestone.ketoneLevel * 8)
+                                    .offset(
+                                        x: cos(Double(index) * 1.57) * 31,
+                                        y: -4 + sin(Double(index) * 1.57) * 21
+                                    )
+                            }
+                        }
+                        .frame(width: width * 0.28, height: height)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(milestone.visualTitle)
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Color.appInk)
+
+                            MeterLine(label: "Glycogen", value: milestone.glycogenLevel, color: Color.appAmber)
+                            MeterLine(label: "Fat use", value: milestone.fatUseLevel, color: Color.appMint)
+                            MeterLine(label: "Ketones", value: milestone.ketoneLevel, color: Color.appBlue)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(12)
+                }
+            }
+        }
+    }
+
+    private struct MeterLine: View {
+        let label: String
+        let value: Double
+        let color: Color
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(label)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(Int(value * 100))%")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+
+                GeometryReader { proxy in
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(color.opacity(0.14))
+                        .overlay(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(color)
+                                .frame(width: proxy.size.width * value)
+                        }
+                }
+                .frame(height: 7)
+            }
+        }
     }
 
     private func historyRow(for session: FastingSession) -> some View {
@@ -223,6 +392,13 @@ private struct FastingMilestone: Identifiable {
     let title: String
     let description: String
     let systemImage: String
+    let bodyShift: String
+    let detectableSigns: String
+    let experience: String
+    let visualTitle: String
+    let glycogenLevel: Double
+    let fatUseLevel: Double
+    let ketoneLevel: Double
 
     var id: Double {
         hours
@@ -241,15 +417,123 @@ private struct FastingMilestone: Identifiable {
     }
 
     static let defaultMilestones = [
-        FastingMilestone(hours: 1, title: "First Hour", description: "You have started the fast and the clock is moving.", systemImage: "1.circle"),
-        FastingMilestone(hours: 4, title: "Settled In", description: "A steady early checkpoint for the session.", systemImage: "4.circle"),
-        FastingMilestone(hours: 8, title: "Half Day", description: "A meaningful stretch of consistency.", systemImage: "8.circle"),
-        FastingMilestone(hours: 12, title: "Twelve Hours", description: "A strong baseline fast completed.", systemImage: "12.circle"),
-        FastingMilestone(hours: 16, title: "Classic 16", description: "A common intermittent fasting milestone.", systemImage: "clock.badge.checkmark"),
-        FastingMilestone(hours: 18, title: "Deep Stretch", description: "You have passed a longer fasting window.", systemImage: "sparkles"),
-        FastingMilestone(hours: 20, title: "Twenty Hours", description: "A serious long-session achievement.", systemImage: "flame"),
-        FastingMilestone(hours: 24, title: "Full Day", description: "A complete 24-hour fast.", systemImage: "sun.max"),
-        FastingMilestone(hours: 36, title: "Extended", description: "An extended fast milestone.", systemImage: "moon.stars")
+        FastingMilestone(
+            hours: 1,
+            title: "First Hour",
+            description: "You have started the fast and the clock is moving.",
+            systemImage: "1.circle",
+            bodyShift: "Digestion and nutrient absorption are still active if you recently ate.",
+            detectableSigns: "Blood glucose and insulin may still reflect your last meal.",
+            experience: "You may feel normal, full, or mentally ready for the session.",
+            visualTitle: "Meal energy still available",
+            glycogenLevel: 0.92,
+            fatUseLevel: 0.18,
+            ketoneLevel: 0.05
+        ),
+        FastingMilestone(
+            hours: 4,
+            title: "Settled In",
+            description: "A steady early checkpoint for the session.",
+            systemImage: "4.circle",
+            bodyShift: "The post-meal phase is tapering and stored glucose starts to matter more.",
+            detectableSigns: "Hunger may come in waves; glucose can begin settling toward baseline.",
+            experience: "Cravings can show up here, especially if the last meal was high in sugar.",
+            visualTitle: "Switching away from meal fuel",
+            glycogenLevel: 0.78,
+            fatUseLevel: 0.26,
+            ketoneLevel: 0.08
+        ),
+        FastingMilestone(
+            hours: 8,
+            title: "Half Day",
+            description: "A meaningful stretch of consistency.",
+            systemImage: "8.circle",
+            bodyShift: "The liver is increasingly using stored glycogen to help maintain blood glucose.",
+            detectableSigns: "You may notice a clearer empty-stomach feeling or mild stomach growling.",
+            experience: "Energy can be stable for some people, while others feel distracted by hunger.",
+            visualTitle: "Liver glycogen supports glucose",
+            glycogenLevel: 0.58,
+            fatUseLevel: 0.38,
+            ketoneLevel: 0.14
+        ),
+        FastingMilestone(
+            hours: 12,
+            title: "Twelve Hours",
+            description: "A strong baseline fast completed.",
+            systemImage: "12.circle",
+            bodyShift: "Many people are moving deeper into the post-absorptive state.",
+            detectableSigns: "Insulin is often lower than after meals; fat use may be rising.",
+            experience: "Morning fasts may feel easier than late-day fasts because sleep covers much of this window.",
+            visualTitle: "Post-absorptive rhythm",
+            glycogenLevel: 0.43,
+            fatUseLevel: 0.5,
+            ketoneLevel: 0.2
+        ),
+        FastingMilestone(
+            hours: 16,
+            title: "Classic 16",
+            description: "A common intermittent fasting milestone.",
+            systemImage: "clock.badge.checkmark",
+            bodyShift: "The metabolic mix may shift further toward fat-derived fuel.",
+            detectableSigns: "Some people can detect mild ketones with a meter; hydration status becomes more noticeable.",
+            experience: "Hunger often rises and falls. Water and electrolytes may help if you feel flat.",
+            visualTitle: "Fat use becomes more visible",
+            glycogenLevel: 0.3,
+            fatUseLevel: 0.64,
+            ketoneLevel: 0.34
+        ),
+        FastingMilestone(
+            hours: 18,
+            title: "Deep Stretch",
+            description: "You have passed a longer fasting window.",
+            systemImage: "sparkles",
+            bodyShift: "Glycogen may be lower, with more reliance on fatty acids and ketones.",
+            detectableSigns: "Breath or blood ketones may rise, especially with lower-carb meals before the fast.",
+            experience: "You may feel focused, cold, headachy, or tired depending on sleep and hydration.",
+            visualTitle: "Ketones start to climb",
+            glycogenLevel: 0.23,
+            fatUseLevel: 0.72,
+            ketoneLevel: 0.44
+        ),
+        FastingMilestone(
+            hours: 20,
+            title: "Twenty Hours",
+            description: "A serious long-session achievement.",
+            systemImage: "flame",
+            bodyShift: "Your body is likely conserving glucose and leaning harder on stored fat.",
+            detectableSigns: "Urine color, dry mouth, or headache can reflect hydration and electrolyte needs.",
+            experience: "Expect stronger hunger signals before they settle. Break the fast gently if you feel unwell.",
+            visualTitle: "Glucose conservation mode",
+            glycogenLevel: 0.18,
+            fatUseLevel: 0.78,
+            ketoneLevel: 0.52
+        ),
+        FastingMilestone(
+            hours: 24,
+            title: "Full Day",
+            description: "A complete 24-hour fast.",
+            systemImage: "sun.max",
+            bodyShift: "A full-day fast may deepen ketosis and cellular cleanup signaling, but timing varies widely.",
+            detectableSigns: "Ketone readings may be more noticeable; exercise tolerance may change.",
+            experience: "Some people feel calm and clear; others feel low energy or irritable. Refeed carefully.",
+            visualTitle: "Full-day metabolic shift",
+            glycogenLevel: 0.12,
+            fatUseLevel: 0.86,
+            ketoneLevel: 0.66
+        ),
+        FastingMilestone(
+            hours: 36,
+            title: "Extended",
+            description: "An extended fast milestone.",
+            systemImage: "moon.stars",
+            bodyShift: "Extended fasting may increase ketone reliance and stress-response hormones.",
+            detectableSigns: "Electrolyte imbalance, dizziness, or weakness are signals to stop and seek guidance.",
+            experience: "This is beyond typical daily time-restricted eating. Medical guidance is wise.",
+            visualTitle: "Extended-fast caution zone",
+            glycogenLevel: 0.07,
+            fatUseLevel: 0.92,
+            ketoneLevel: 0.82
+        )
     ]
 }
 
