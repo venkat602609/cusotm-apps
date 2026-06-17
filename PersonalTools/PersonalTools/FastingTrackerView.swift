@@ -18,15 +18,26 @@ struct FastingTrackerView: View {
                 Section("Achievements") {
                     let elapsed = store.activeSession?.elapsedSeconds(at: now) ?? 0
 
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Text("Milestones are educational estimates. Your body may respond differently based on meals, activity, sleep, hydration, medications, and health conditions.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .padding(.bottom, 4)
 
-                        ForEach(milestones) { milestone in
-                            milestoneRow(milestone, elapsed: elapsed)
+                        TabView {
+                            ForEach(milestones) { milestone in
+                                milestoneRow(milestone, elapsed: elapsed)
+                                    .padding(.horizontal, 2)
+                            }
                         }
+                        .tabViewStyle(.page(indexDisplayMode: .automatic))
+                        .indexViewStyle(.page(backgroundDisplayMode: .always))
+                        .frame(height: 610)
+
+                        Label("Swipe to explore fasting milestones", systemImage: "hand.draw")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                 }
@@ -204,7 +215,7 @@ struct FastingTrackerView: View {
             }
 
             BodyMilestoneGraphic(milestone: milestone, unlocked: unlocked)
-                .frame(height: 112)
+                .frame(height: 230)
 
             VStack(alignment: .leading, spacing: 9) {
                 MilestoneInsightRow(title: "Body shift", text: milestone.bodyShift, color: Color.appBlue)
@@ -256,7 +267,6 @@ struct FastingTrackerView: View {
 
         var body: some View {
             GeometryReader { proxy in
-                let width = proxy.size.width
                 let height = proxy.size.height
                 let accent = unlocked ? Color.appTeal : Color.secondary
 
@@ -270,53 +280,47 @@ struct FastingTrackerView: View {
                             )
                         )
 
-                    HStack(spacing: 14) {
-                        ZStack {
-                            Capsule()
-                                .stroke(accent.opacity(0.26), lineWidth: 3)
-                                .frame(width: 46, height: 68)
+                    Image(milestone.artworkName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: height)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .opacity(unlocked ? 1 : 0.42)
+                        .saturation(unlocked ? 1 : 0.25)
 
-                            Circle()
-                                .fill(accent.opacity(0.18))
-                                .frame(width: 28, height: 28)
-                                .offset(y: -40)
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.88),
+                            Color.white.opacity(0.36),
+                            Color.appInk.opacity(0.18)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
 
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(Color.appAmber.opacity((1 - milestone.glycogenLevel) * 0.5 + 0.12))
-                                .frame(width: 24, height: max(10, 46 * milestone.glycogenLevel))
-                                .offset(y: 14 + (1 - milestone.glycogenLevel) * 18)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(milestone.visualTitle, systemImage: unlocked ? "sparkles" : "lock.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color.appInk)
 
-                            ForEach(0..<3, id: \.self) { index in
-                                Circle()
-                                    .fill(Color.appMint.opacity(milestone.fatUseLevel * 0.46 + 0.16))
-                                    .frame(width: 9 + CGFloat(index) * 2, height: 9 + CGFloat(index) * 2)
-                                    .offset(x: CGFloat(index - 1) * 20, y: 38)
-                            }
-
-                            ForEach(0..<4, id: \.self) { index in
-                                Circle()
-                                    .fill(Color.appBlue.opacity(milestone.ketoneLevel * 0.6 + 0.1))
-                                    .frame(width: 6 + milestone.ketoneLevel * 8, height: 6 + milestone.ketoneLevel * 8)
-                                    .offset(
-                                        x: cos(Double(index) * 1.57) * 31,
-                                        y: -4 + sin(Double(index) * 1.57) * 21
-                                    )
-                            }
-                        }
-                        .frame(width: width * 0.28, height: height)
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(milestone.visualTitle)
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(Color.appInk)
-
-                            MeterLine(label: "Glycogen", value: milestone.glycogenLevel, color: Color.appAmber)
-                            MeterLine(label: "Fat use", value: milestone.fatUseLevel, color: Color.appMint)
-                            MeterLine(label: "Ketones", value: milestone.ketoneLevel, color: Color.appBlue)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        MeterLine(label: "Glycogen", value: milestone.glycogenLevel, color: Color.appAmber)
+                        MeterLine(label: "Fat use", value: milestone.fatUseLevel, color: Color.appMint)
+                        MeterLine(label: "Ketones", value: milestone.ketoneLevel, color: Color.appBlue)
                     }
                     .padding(12)
+                    .frame(maxWidth: 170, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Circle()
+                        .stroke(accent.opacity(unlocked ? 0.55 : 0.26), lineWidth: 2)
+                        .frame(width: 54, height: 54)
+                        .overlay {
+                            Image(systemName: unlocked ? "bolt.heart.fill" : "circle.dotted")
+                                .font(.title3)
+                                .foregroundStyle(accent)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
             }
         }
@@ -752,6 +756,19 @@ private struct FastingMilestone: Identifiable {
         }
 
         return "\(hours)h"
+    }
+
+    var artworkName: String {
+        switch hours {
+        case ..<12:
+            return "FastingMealEnergy"
+        case 12..<20:
+            return "FastingFatUse"
+        case 20..<48:
+            return "FastingKetosis"
+        default:
+            return "FastingExtended"
+        }
     }
 
     static let defaultMilestones = [
