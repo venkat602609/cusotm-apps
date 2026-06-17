@@ -267,8 +267,11 @@ struct FastingTrackerView: View {
 
         var body: some View {
             GeometryReader { proxy in
+                let width = proxy.size.width
                 let height = proxy.size.height
                 let accent = unlocked ? Color.appTeal : Color.secondary
+                let activation = unlocked ? milestone.activationLevel : 0.16
+                let activationColor = unlocked ? milestone.activationColor : Color.secondary
 
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -283,10 +286,32 @@ struct FastingTrackerView: View {
                     Image(milestone.artworkName)
                         .resizable()
                         .scaledToFill()
-                        .frame(height: height)
+                        .frame(width: width, height: height)
+                        .scaleEffect(milestone.artworkScale, anchor: milestone.artworkAnchor)
                         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         .opacity(unlocked ? 1 : 0.42)
                         .saturation(unlocked ? 1 : 0.25)
+
+                    activationColor
+                        .opacity(activation * 0.18)
+                        .blendMode(.screen)
+
+                    ForEach(0..<3, id: \.self) { index in
+                        Circle()
+                            .stroke(activationColor.opacity(activation * (0.36 - Double(index) * 0.08)), lineWidth: 2)
+                            .frame(width: 58 + CGFloat(index) * 34, height: 58 + CGFloat(index) * 34)
+                            .position(x: width * milestone.activationX, y: height * milestone.activationY)
+                    }
+
+                    ForEach(0..<milestone.particleCount, id: \.self) { index in
+                        Circle()
+                            .fill(activationColor.opacity(activation * 0.5))
+                            .frame(width: particleSize(index), height: particleSize(index))
+                            .position(
+                                x: width * particleX(index),
+                                y: height * particleY(index)
+                            )
+                    }
 
                     LinearGradient(
                         colors: [
@@ -299,9 +324,13 @@ struct FastingTrackerView: View {
                     )
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Label(milestone.visualTitle, systemImage: unlocked ? "sparkles" : "lock.fill")
+                        Label(milestone.activationTitle, systemImage: unlocked ? milestone.activationIcon : "lock.fill")
                             .font(.caption.weight(.bold))
                             .foregroundStyle(Color.appInk)
+
+                        Text(milestone.visualTitle)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
 
                         MeterLine(label: "Glycogen", value: milestone.glycogenLevel, color: Color.appAmber)
                         MeterLine(label: "Fat use", value: milestone.fatUseLevel, color: Color.appMint)
@@ -312,10 +341,14 @@ struct FastingTrackerView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                     Circle()
-                        .stroke(accent.opacity(unlocked ? 0.55 : 0.26), lineWidth: 2)
+                        .stroke(activationColor.opacity(unlocked ? 0.62 : 0.26), lineWidth: 2)
+                        .background(
+                            Circle()
+                                .fill(activationColor.opacity(unlocked ? 0.16 : 0.08))
+                        )
                         .frame(width: 54, height: 54)
                         .overlay {
-                            Image(systemName: unlocked ? "bolt.heart.fill" : "circle.dotted")
+                            Image(systemName: unlocked ? milestone.activationIcon : "circle.dotted")
                                 .font(.title3)
                                 .foregroundStyle(accent)
                         }
@@ -323,6 +356,20 @@ struct FastingTrackerView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
             }
+        }
+
+        private func particleSize(_ index: Int) -> CGFloat {
+            4 + CGFloat((index % 4) * 2)
+        }
+
+        private func particleX(_ index: Int) -> CGFloat {
+            let base = (Double((index * 37) % 100) / 100)
+            return 0.42 + (base * 0.48)
+        }
+
+        private func particleY(_ index: Int) -> CGFloat {
+            let base = (Double((index * 53) % 100) / 100)
+            return 0.16 + (base * 0.68)
         }
     }
 
@@ -769,6 +816,165 @@ private struct FastingMilestone: Identifiable {
         default:
             return "FastingExtended"
         }
+    }
+
+    var artworkAnchor: UnitPoint {
+        switch hours {
+        case 1:
+            return .center
+        case 4:
+            return .bottomLeading
+        case 8:
+            return .leading
+        case 12:
+            return .center
+        case 16:
+            return .bottom
+        case 18:
+            return .trailing
+        case 20:
+            return .topTrailing
+        case 24:
+            return .top
+        case 36:
+            return .center
+        case 48:
+            return .topLeading
+        case 60:
+            return .leading
+        case 72:
+            return .center
+        case 84:
+            return .trailing
+        default:
+            return .topTrailing
+        }
+    }
+
+    var artworkScale: CGFloat {
+        switch hours {
+        case 1, 12, 36, 72:
+            return 1.0
+        case 4, 16, 48, 84:
+            return 1.08
+        case 8, 20, 60, 96:
+            return 1.14
+        default:
+            return 1.2
+        }
+    }
+
+    var activationTitle: String {
+        switch hours {
+        case ..<4:
+            return "Digestive energy"
+        case 4..<8:
+            return "Glucose settling"
+        case 8..<12:
+            return "Liver support"
+        case 12..<16:
+            return "Post-meal reset"
+        case 16..<20:
+            return "Fat-use ramp"
+        case 20..<24:
+            return "Glucose conservation"
+        case 24..<36:
+            return "Ketone signal"
+        case 36..<48:
+            return "Deep adaptation"
+        case 48..<60:
+            return "Ketone reliance"
+        case 60..<72:
+            return "Electrolyte watch"
+        case 72..<84:
+            return "High-caution zone"
+        case 84..<96:
+            return "Strain check"
+        default:
+            return "Safety checkpoint"
+        }
+    }
+
+    var activationIcon: String {
+        switch hours {
+        case ..<4:
+            return "fork.knife.circle.fill"
+        case 4..<12:
+            return "drop.fill"
+        case 12..<20:
+            return "leaf.fill"
+        case 20..<36:
+            return "brain.head.profile"
+        case 36..<60:
+            return "sparkles"
+        case 60..<72:
+            return "waveform.path.ecg"
+        case 72..<96:
+            return "exclamationmark.shield.fill"
+        default:
+            return "cross.case.fill"
+        }
+    }
+
+    var activationColor: Color {
+        switch hours {
+        case ..<12:
+            return Color.appAmber
+        case 12..<20:
+            return Color.appMint
+        case 20..<48:
+            return Color.appBlue
+        case 48..<72:
+            return Color.appTeal
+        default:
+            return Color.appAmber
+        }
+    }
+
+    var activationLevel: Double {
+        min(max((1 - glycogenLevel) * 0.36 + fatUseLevel * 0.3 + ketoneLevel * 0.44, 0.18), 1)
+    }
+
+    var activationX: CGFloat {
+        switch hours {
+        case ..<4:
+            return 0.62
+        case 4..<12:
+            return 0.58
+        case 12..<20:
+            return 0.5
+        case 20..<36:
+            return 0.58
+        case 36..<60:
+            return 0.53
+        case 60..<84:
+            return 0.56
+        default:
+            return 0.61
+        }
+    }
+
+    var activationY: CGFloat {
+        switch hours {
+        case ..<4:
+            return 0.58
+        case 4..<12:
+            return 0.5
+        case 12..<20:
+            return 0.62
+        case 20..<36:
+            return 0.35
+        case 36..<60:
+            return 0.44
+        case 60..<84:
+            return 0.38
+        default:
+            return 0.32
+        }
+    }
+
+    var particleCount: Int {
+        Int(8 + activationLevel * 16)
     }
 
     static let defaultMilestones = [
