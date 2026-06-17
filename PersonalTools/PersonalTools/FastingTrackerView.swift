@@ -1097,15 +1097,37 @@ private struct FastingMilestone: Identifiable {
     }
 
     var artworkName: String {
-        switch hours {
-        case ..<12:
-            return "FastingMealEnergy"
-        case 12..<20:
-            return "FastingFatUse"
-        case 20..<48:
-            return "FastingKetosis"
+        switch Int(hours) {
+        case 1:
+            return "FastingMilestone01"
+        case 4:
+            return "FastingMilestone04"
+        case 8:
+            return "FastingMilestone08"
+        case 12:
+            return "FastingMilestone12"
+        case 16:
+            return "FastingMilestone16"
+        case 18:
+            return "FastingMilestone18"
+        case 20:
+            return "FastingMilestone20"
+        case 24:
+            return "FastingMilestone24"
+        case 36:
+            return "FastingMilestone36"
+        case 48:
+            return "FastingMilestone48"
+        case 60:
+            return "FastingMilestone60"
+        case 72:
+            return "FastingMilestone72"
+        case 84:
+            return "FastingMilestone84"
+        case 96:
+            return "FastingMilestone96"
         default:
-            return "FastingExtended"
+            return "FastingMilestone01"
         }
     }
 
