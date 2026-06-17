@@ -205,13 +205,19 @@ struct MortgageCalculatorView: View {
     }
 
     private func currencyField(_ title: String, value: Binding<Double>) -> some View {
-        TextField(title, value: value, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
-            .keyboardType(.decimalPad)
+        LabeledContent(title) {
+            TextField(title, value: value, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+        }
     }
 
     private func percentField(_ title: String, value: Binding<Double>) -> some View {
-        TextField(title, value: value, format: .number.precision(.fractionLength(0...2)))
-            .keyboardType(.decimalPad)
+        LabeledContent("\(title) (%)") {
+            TextField(title, value: value, format: .number.precision(.fractionLength(0...2)))
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+        }
     }
 }
 
