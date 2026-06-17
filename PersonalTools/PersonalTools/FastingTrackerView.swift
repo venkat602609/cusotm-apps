@@ -168,7 +168,7 @@ struct FastingTrackerView: View {
                     .foregroundStyle(Color.appTeal)
             }
 
-            PreviewMorphGraphic(current: milestone, next: next, progress: state.progress)
+            PreviewMorphGraphic(current: milestone, next: next, progress: state.progress, timelineProgress: previewHours / 96)
                 .frame(height: 230)
 
             VStack(spacing: 8) {
@@ -414,6 +414,7 @@ struct FastingTrackerView: View {
         let current: FastingMilestone
         let next: FastingMilestone?
         let progress: Double
+        let timelineProgress: Double
 
         var body: some View {
             GeometryReader { proxy in
@@ -423,6 +424,8 @@ struct FastingTrackerView: View {
                 let activation = blended(\.activationLevel)
                 let activationX = blendedCGFloat(\.activationX)
                 let activationY = blendedCGFloat(\.activationY)
+                let imageWidth = height * 3.0
+                let panOffset = -(imageWidth - width) * CGFloat(timelineProgress)
 
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -434,25 +437,16 @@ struct FastingTrackerView: View {
                             )
                         )
 
-                    Image(current.artworkName)
+                    Image("FastingTimelineMorph")
                         .resizable()
                         .scaledToFill()
-                        .frame(width: width, height: height)
-                        .scaleEffect(current.artworkScale + progress * 0.06, anchor: current.artworkAnchor)
-                        .opacity(1 - progress * 0.72)
-
-                    if let next {
-                        Image(next.artworkName)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: width, height: height)
-                            .scaleEffect(next.artworkScale - (1 - progress) * 0.04, anchor: next.artworkAnchor)
-                            .opacity(progress)
-                            .blur(radius: max(0, (0.5 - abs(progress - 0.5)) * 5))
-                    }
+                        .frame(width: imageWidth, height: height)
+                        .offset(x: panOffset)
+                        .frame(width: width, height: height, alignment: .leading)
+                        .saturation(1.05)
 
                     color
-                        .opacity(activation * 0.2)
+                        .opacity(activation * 0.13)
                         .blendMode(.screen)
 
                     ForEach(0..<4, id: \.self) { index in
