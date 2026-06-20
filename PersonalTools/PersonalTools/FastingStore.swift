@@ -43,6 +43,20 @@ final class FastingStore: ObservableObject {
         save()
     }
 
+    func updateSessionDuration(id: UUID, hours: Double) {
+        guard let index = sessions.firstIndex(where: { $0.id == id }) else { return }
+
+        let duration = max(hours, 0.25) * 3600
+        sessions[index].endedAt = sessions[index].startedAt.addingTimeInterval(duration)
+
+        if activeSession?.id == id {
+            activeSession = nil
+        }
+
+        sessions.sort { $0.startedAt > $1.startedAt }
+        save()
+    }
+
     func deleteSessions(at offsets: IndexSet) {
         let removedIds = offsets.map { sessions[$0].id }
         sessions.remove(atOffsets: offsets)

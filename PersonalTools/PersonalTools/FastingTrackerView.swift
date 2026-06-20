@@ -751,6 +751,7 @@ private struct FastingCalendarHistoryView: View {
     @EnvironmentObject private var store: FastingStore
     @State private var visibleMonth = Date.now
     @State private var selectedDay = Date.now
+    @State private var editingSession: FastingSession?
 
     let now: Date
 
@@ -793,6 +794,11 @@ private struct FastingCalendarHistoryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             visibleMonth = selectedDay
+        }
+        .sheet(item: $editingSession) { session in
+            EditFastingSessionView(session: session, now: now) { hours in
+                store.updateSessionDuration(id: session.id, hours: hours)
+            }
         }
     }
 
@@ -867,20 +873,30 @@ private struct FastingCalendarHistoryView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(sessions) { session in
-                    HStack {
-                        Image(systemName: session.isActive ? "timer.circle.fill" : "checkmark.circle.fill")
-                            .foregroundStyle(session.isActive ? Color.appTeal : Color.appMint)
+                    Button {
+                        editingSession = session
+                    } label: {
+                        HStack {
+                            Image(systemName: session.isActive ? "timer.circle.fill" : "checkmark.circle.fill")
+                                .foregroundStyle(session.isActive ? Color.appTeal : Color.appMint)
 
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(sessionRangeText(session))
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(sessionRangeText(session))
+                                    .font(.caption.weight(.semibold))
+                                Text("\(hoursText(overlapSeconds(session, on: selectedDay))) on this day")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Label("Edit", systemImage: "pencil")
                                 .font(.caption.weight(.semibold))
-                            Text("\(hoursText(overlapSeconds(session, on: selectedDay))) on this day")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .labelStyle(.iconOnly)
+                                .foregroundStyle(Color.appTeal)
                         }
-
-                        Spacer()
                     }
+                    .buttonStyle(.plain)
                     .padding(.vertical, 2)
                 }
             }
@@ -1043,6 +1059,84 @@ private struct FastingCalendarHistoryView: View {
         }
 
         return String(format: "%.1fh", hours)
+    }
+}
+
+private struct EditFastingSessionView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var hours: Double
+
+    let session: FastingSession
+    let now: Date
+    let onSave: (Double) -> Void
+
+    init(session: FastingSession, now: Date, onSave: @escaping (Double) -> Void) {
+        self.session = session
+        self.now = now
+        self.onSave = onSave
+        _hours = State(initialValue: max(session.elapsedSeconds(at: now) / 3600, 0.25))
+    }
+
+    private var adjustedEndDate: Date {
+        session.startedAt.addingTimeInterval(hours * 3600)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Fast Length") {
+                    LabeledContent("Hours") {
+                        TextField("Hours", value: $hours, format: .number.precision(.fractionLength(0...2)))
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                    }
+
+                    Stepper(value: $hours, in: 0.25...168, step: 0.25) {
+                        Text("\(hoursText(hours * 3600)) total")
+                    }
+                }
+
+                Section("Adjusted Time") {
+                    LabeledContent("Started") {
+                        Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
+                    }
+
+                    LabeledContent("Ends") {
+                        Text(adjustedEndDate.formatted(date: .abbreviated, time: .shortened))
+                    }
+
+                    if session.isActive {
+                        Text("Saving this edit will stop the active timer and record the adjusted fast length.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .navigationTitle("Edit Fast")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(hours)
+                        dismiss()
+                    }
+                    .disabled(hours < 0.25)
+                }
+            }
+        }
+    }
+
+    private func hoursText(_ interval: TimeInterval) -> String {
+        let totalMinutes = max(Int(interval / 60), 0)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        return "\(hours)h \(minutes)m"
     }
 }
 

@@ -3,6 +3,11 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         TabView {
+            FastingTrackerView()
+                .tabItem {
+                    Label("Fasting", systemImage: "timer")
+                }
+
             CompoundInterestView()
                 .tabItem {
                     Label("Compound", systemImage: "chart.line.uptrend.xyaxis")
@@ -11,11 +16,6 @@ struct ContentView: View {
             MortgageCalculatorView()
                 .tabItem {
                     Label("Mortgage", systemImage: "house")
-                }
-
-            FastingTrackerView()
-                .tabItem {
-                    Label("Fasting", systemImage: "timer")
                 }
         }
         .tint(Color.appTeal)
