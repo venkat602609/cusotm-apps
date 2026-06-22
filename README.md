@@ -12,7 +12,7 @@ OrbitKit is a native SwiftUI iPhone and iPad app that bundles simple personal to
 - `PersonalTools/Assets.xcassets/` - app icon and image assets
 - `PersonalTools/AppStoreAssets/` - captured App Store screenshot assets
 - `PersonalTools/AppStoreAssets/Screenshots/AppStore/` - generated App Store-ready iPhone and iPad screenshot images
-- `docs/` - GitHub Pages marketing, support, and privacy pages
+- `docs/` - legacy GitHub Pages marketing, support, and privacy pages
 - `fastlane/` - App Store Connect metadata automation
 
 ## App Store Metadata
@@ -22,24 +22,15 @@ OrbitKit is a native SwiftUI iPhone and iPad app that bundles simple personal to
 - Supported devices: iPhone and iPad
 - Minimum OS: iOS/iPadOS 16.0
 
-## GitHub Pages
+## Public App Pages
 
-This repo is ready to serve the OrbitKit public pages from the root `docs/` folder.
+OrbitKit's public App Store links are hosted from the personal website repo at `/Users/venkata/Documents/personal_website`.
 
-Enable it in GitHub:
+- Marketing: `https://venkatakajuluri.com/orbitkit.html`
+- Support: `https://venkatakajuluri.com/orbitkit-support.html`
+- Privacy Policy: `https://venkatakajuluri.com/orbitkit-privacy.html`
 
-1. Open the repo settings.
-2. Go to **Pages**.
-3. Set source to **Deploy from a branch**.
-4. Select branch `main`.
-5. Select folder `/docs`.
-6. Save.
-
-Expected URLs:
-
-- Marketing: `https://venkat602609.github.io/cusotm-apps/`
-- Support: `https://venkat602609.github.io/cusotm-apps/support.html`
-- Privacy Policy: `https://venkat602609.github.io/cusotm-apps/privacy.html`
+The Fastlane metadata under `fastlane/metadata/en-US/` uses these personal website URLs.
 
 ## App Store Screenshot Images
 
