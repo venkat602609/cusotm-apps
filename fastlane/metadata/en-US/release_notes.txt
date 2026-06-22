@@ -1,0 +1,7 @@
+Version 1.0.1 adds improvements to fasting history and calculator usability:
+
+- Edit fasting session hours from the calendar when a fast was accidentally left running
+- Fasting is now the first tab for quicker access
+- Compound interest and mortgage calculator inputs now show clearer field labels
+- Added unique artwork for fasting milestones
+- General polish and stability improvements
