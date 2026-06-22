@@ -34,8 +34,10 @@ platform :ios do
       FileUtils.mkdir_p(fastlane_screenshots)
 
       screenshot_sources = {
-        "iPhone-6.5" => "iphone",
-        "iPad-13" => "ipad"
+        "iPhone-6.9" => "iphone-69",
+        "iPhone-6.7" => "iphone-67",
+        "iPhone-6.5" => "iphone-65",
+        "iPad-13" => "ipad-13"
       }
 
       screenshot_sources.each do |folder, prefix|
@@ -48,6 +50,7 @@ platform :ios do
     deliver(
       api_key: api_key,
       app_identifier: "com.venkata.Orbit",
+      app_version: ENV.fetch("APP_VERSION", "1.0.1"),
       metadata_path: "fastlane/generated_metadata",
       screenshots_path: "fastlane/screenshots",
       submit_for_review: false,
